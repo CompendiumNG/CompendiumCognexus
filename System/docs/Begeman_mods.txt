@@ -1,0 +1,842 @@
+Compendium modifications made by M.Begeman - Fall 2007 / Spring 2008
+
+FINISHED
+========
+
+UIStartUp.java - added ALPHA xx to the version string, as well as the name of the default 
+	database being opened.
+
+*******************************************************************
+
+UISearchDialog.java - Bug fix where Before/After boxes were switched for "Date Modified" search
+
+*******************************************************************
+
+DBBackupDatabase.java - Bug fix: Changed algorithm to write the backup file out a line at a time instead
+	of caching the whole thing in memory (failed if the database was large).  Only made change to the
+	SQL backup code (zip and XML still need to be looked at).
+	
+DBRestoreDatabase.java -  Bug fix: Changed algorithm to restore the backup file a line at a time instead
+	of caching the whole thing in memory (failed if the database was large).  Only made change to the
+	SQL backup code (zip and XML still need to be looked at).
+	
+	Bug fix: Added deleteAllData() method to purge the tables before doing a restore. As it was, restoring
+	into an existing project did not remove/replace existing data, even though the dialogs warn that
+	all existing data will be lost.  Now, the tables are emptied before the load begins.
+
+*******************************************************************
+Performance
+
+DBNode.java -and-
+DBNodeUserState.java - Made a set of changes to modify the way unread nodes are represented in the
+	database. Formerly, the code created an 'unread' entry for each node, and for each user in the 
+	NodeUserState table.  This created a lot of unnecessary records and impacted performance on large
+	databases.  The basic change is disabling this behavior, and making Compendium consider the
+	lack of an entry in the NodeUserState table to indicate an UNREAD status.
+	*** N.B. this needs to be reviewed and validated for completeness *** 
+
+*******************************************************************
+
+INodeService.java    -and-
+NodeService.java     -and-
+DBNode.java          -and-
+DBNodeUserState.java - Implemented methods that will return the total number of records in the
+	Node table, and the total number of records for the current user in the NodeUserState table.
+	These are used in UIMenuView to calculate the size of the Unread View and give the user a
+	chance to bail if they are asking to build a huge view.
+	New methods are lGetNodeCount() and lGetStateCount().
+	
+	Implemented parallel set of lGetViewCount() methods to issue a warning if they choose
+	View ==> "Map/List Views..." menu item on a large database.
+	
+UIMenuView - Changes to AddUnreadView to check the size of the task - letting the user bail!
+		   - Changes to ActionPerformed to check size of View ==> Map/List Views request
+
+*******************************************************************
+New feature
+
+UIUtilities.java - Modified CopyDnDfile() to implement new feature that allows an administrator
+	to create a system-wide override on where "Copied Linked Files" are stored.  This is
+	useful in a true groupware setting where you want Linked Filed stored on a mapped network
+	drive.
+	Modified unzipXMLZipFile() to correctly place Zipped reference nodes in the folder
+	specified by the override.
+	
+XMLImport.java - Make changes to put imported reference nodes into the customized 
+	"Copied Linked Files" folder, if any.  Modifications all reference
+	UIUtilities.sGetPathPrefix().	
+
+*******************************************************************
+Performance
+
+UINodeEditPanel - Replaced the usage of jFileChooser with java.awt.FileDialog().  Although
+	jFileChooser is a more modern interface to the file system, there are huge performance
+	problems with it dating back to 2004.  Lots of discussion about this is on the Sun Java
+	discussion boards - but no good workaround.  This causes very slow performance in opening
+	the 'contents' and 'properties' windows for Maps and Reference nodes, because they have
+	a 'file chooser' for icons, background, and/or the reference node target.  Depending on
+	different things, opening one of these could take anywhere from 10 seconds to several
+	minutes (on Windows, at least).
+
+*******************************************************************
+	
+UINodeEditPanel.onExecute() - Bug fix.  In v1.5.2, 	if you double click an INR in your inbox
+	it will open fine, but if you open the INR's Contents (right click) and then press the
+	Launch button, it will fail.  This has to do with onExecute() not being able to figure out
+	the 'History Bar' path of how we got to where we are.  Fixed with a kludge that forces the
+	History Bar to "?" when this happens (hey, it's better than failing completely!).
+
+*******************************************************************
+Feature modification
+ 
+ UIList.java	-and-
+ ListTableModel.java - (1) Added AUTHOR to list views; (2) Changed the default ('Less') list
+ 	view to include Creation date and Author info.  This makes the Inbox easier to deal with
+ 	(i.e., it shows the creation date and author of the message)
+
+******************************************************************* 	
+*** Changes to speed up label typing (defer DB update until node loses focus) ***
+
+These are important in a networked environment because 1.5.2 executes a database
+update for every keystroke!
+
+NodeSummary.java -  
+	1) Made setLabelLocal a public method, added a bLabelDirty flag which tells us that the 
+	   label needs to be flushed to the database
+	2) Added flushLabel() method to flush the label to the DB if it's dirty
+UINode.java - 
+	1) Added a call to NodeSummary.flushLabel() from lostFocus() method to push the label to the
+	   DB if necessary
+	2) Created a shadow setText() method that takes a boolean flag bDefer, which calls
+	   NodeSummary.setLabelLocal() instead of NodeSummary.setLabel()
+NodeUI.java - Changed the following methods to call UINode.setText() with the boolean bDefer flag:
+	addCharToLabel() - paste() - cut() - delete() - keypressed()(while in 'editing' state)
+
+******************************************************************* 	  
+*** Changes that speed up opening maps, opening nodes, creating nodes & links (and maybe other stuff)
+
+NodeSummary.java - changed the way that getNumOfMultipleViews() determines the number of
+	parents a node has. Now does this by calling the new method iGetParentCount()
+
+INodeService.java    -and-
+NodeService.java     -and-
+DBNode.java         Implemented new method iGetParentCount() to directly give us the number
+					of parents a given node has.	
+
+*******************************************************************
+*** General performance mods ***
+
+DBConnection.java - Changed MYSQL_SESSION_TIMEOUT from 28800 to 28800000.  The timeout as
+	documented was supposed to be an 8 hour timeout.  But the methods used return time in
+	milliseconds (28800 is 8 hours of *seconds*).  This means the database connection was
+	being timed out every 28.8 seconds(!!!) causing a new DB connection to be initialized. 
+	
+	Follow-up note: This value has been scaled back to 120000 (2 minutes) because of a 
+	server-side timeout at Pair.  This causes 6 DB calls every time there's been a 2-minute
+	idle by the user.  When this goes into deployment at SCE, this value should be scaled
+	up to 'match' any of the server timeouts they set.  (N.B. On Jeff's ISP's MySQL server,
+	this number can be scaled up to 10 minutes [600000] safely.)
+	
+ProjectCompendium.App.setTrashBinIcon() - This method sets the TrashBin Icon, and changes if there are 
+	deleted nodes in the database.  This *was* accomplishing this by calling NodeService.GetDeletedNodeSummary()
+	which fetches all the deleted node data from the DB and builds a vector of node objects
+	(in turn,causing more database calls), only to count the elements in the vector and then
+	garbage-collect all of it.  setTrashBinIcon() now calls a new method iGetDeletedNodeCount()
+	which gives us the count directly and saves a LOT of database activity for node/map/link deletion.	
+
+DBNode.ProcessNode - Changed three calls (GetImage,GetReference, GetImageSize) - each
+	resulting in a database call - to getIRIS, which does all three in one shot.  This
+	optimization benefits opening maps, eliminating lots of database calls.
+DBReferenceNode.getIRIS() - New method to implement the change to ProcessNode()
+
+NodeService.getReaders() - Changed code from using DBUser.getUserProfileFromID() which incurs seven (7!)
+	database calls to a new method DBUser.getUserNameFromID() which gets the needed info (reader's name) 
+	with one query.  This speeds up opening an object's contents or properties or detail pane.
+	
+	Also fixed a bug here - the code was displaying the Author field from the User table when
+	it should have been displaying the Name field.  
+	
+*******************************************************************
+
+Collection of updates that eliminate hitting the database for user names when
+populating the node details window and the Readers pop-up
+
+NodeService.getReaderIDs()	- and -
+iNodeService.getReaderIDs()			New methods which return a list of an objects's reader's IDs
+
+UserProfile.java - added getUserID() method
+
+UINodePropertiesPanel.UpdateReadersInformation() -and-
+UIReadersDialog.UpdateListView (hey, I didn't name it this...) - changed their algorithms to
+	use the new getReaderIDs() method and look up the name from the in-memory UserProfile list
+	instead of going back to the database for each reader just to get their name.
+		
+*******************************************************************	
+New feature
+
+ViewPaneUI.java - Added F12 and Shift-F12 event handlers to mark an entire selection seen/unseen. [Map views]
+	Added methods onMarkSelectionSeen() and onMarkSelectionUnseen(), which are called by keyPressed()
+UIViewPane.java - Added markSelectionSeen() and markSelectionUnseen to actually implement this.
+
+ListUI.java - Added F12 and Shift-F12 event handlers to mark an entire selection seen/unseen. [List views]
+	Added methods onMarkSelectionSeen() and onMarkSelectionUnseen(), which are called by keyPressed(),
+	and which actually implement the functionality.
+	
+Bug fix: ListUI.openNode() - added some code that marks a Reference node (INR) as 'Seen' if you double-click
+	on it.  In 1.5.2, the reference would launch, but leave the node marked as unseen in the list.  This
+	was mostly problematic in your Inbox.	
+
+*******************************************************************
+New feature
+
+UINodePopupMenu.java - Added code to onCreateInternalLinkInView() that sends an internet email message
+	whenever someone sends a node to someone's internal Inbox.
+	
+*******************************************************************
+New feature
+**** Changes to implement File ==> Mark Entire Project as Seen ****
+
+messages.properties - Added menu item #234 "Mark Entire Project as Seen"
+UIMenuFile.java - Added #234 to the File menu (miMarkProjectSeen)
+ProjectCompendiumFrame.java - added onMarkProjectSeen() to handle the menu item when selected, and
+	isProjectOpen2() helper method.
+UIMarkProjectSeenDialog.java - New code for the dialog box
+MarkProjectSeen.java (in com.compendium.ui for lack of a better place) - Drives the actual work
+	and also creates/destroys the progress bar.	
+INodeService.vMarkProjectSeen ==> 
+	NodeService.vMarkProjectSeen ==> 
+	DBNode.vMarkProjectSeen	==>
+	DBNodeUserState.vMarkProjectSeen() - Actually implements the DB updates to mark all as seen.
+	
+*******************************************************************
+FormatProperties.java - Bug fix.  In v1.5.2 Compendium would pay attention to the 'displayUnreadView'
+	property upon startup, and display (or not) the Unread View based on whether or not it was
+	visible when C. closed last.  However, 1.5.2 did *not* set the state of the "View => Unread View"
+	menu to correspond, so you'd end up with the Unread View displayed and no way to turn it off (the
+	only menu option was to turn it on, which gives you *another* Unread View tab.
+	Although one way to fix this would be to make the menu item 'checked' if the property is set, I
+	decided to simply force the Unread View off when C. starts.  Part of the rationale for this is that
+	the Unread View forces a traversal of the entire reachable database starting at your home window,
+	which is very slow when on a network.  If you're in a big database, this could mean waiting many
+	minutes before your home window opens.  
+	
+*******************************************************************
+UISearchDialog.java - Removed 'Case sensitive' from the search keyword dialog, because
+	keyword searches are *not* case sensitive!
+
+*******************************************************************
+Feature change, bug fix & major groupware performance improvement	
+
+The "timed refresh" code, which is a groupware feature, reloads your maps periodically so you'll see
+changes other people have made.  As implemented in v1.5.2, what it does is throw away all data it has
+for all open views, fetches the data for all open views from the database again, and rebuilds the views.
+This is VERY slow (practically unusable) if your database is on the internet, and most of the time 
+completely unnecessary.
+
+The following modules were modified to make Compendium keep track of the last time each view was modified
+by someone else.  When the timer goes off, Compendium now checks (with 1 database call) to see if
+anyone has modified the view since we last loaded it.  If nobody has, we're done.  If a view *has*
+been changed by someone, the user is given the option of reloading the project now automatically, or
+manually (with the refresh button) when it is convenient.
+
+Note: Future way to make this even better: (1) figure out how to add just the incremental changes to a view.
+
+Data side changes...
+	datamodel.nodesummary.java - Added an instance variable and a getter method getLastModificationDate() 
+		to keep track of the last modificationdate for the node.
+	datamodel.view.java - Added an instance variable LastModifiedbyOther to track the last time this view
+		was modified by someone else.  Added code to initializemembers() to update this var as a view's
+		nodes are read in from the database.  Added bIsViewDirty() method to return whether or not the database
+		contains updates not reflected in the View object.	
+	datamodel.services.IViewService - added bIsViewDirty(), which links to...
+	datamodel.services.ViewService - added bIsViewDirty(), which links to...
+	db.DBViewNode.java - added bIsViewDirty() which queries the database for updated nodes.
+	db.management.DBConnection.java - Changed BUSY_TIMEOUT from 2 seconds to 2 minutes.  Turns out that
+		the bIsViewDirty() polling code is getting a shared DB connection.  If the polling code (which is fast) runs 
+		while a view is loading (a long operation), the DBConnection code was closing the Connection when the
+		polling code returned the connection to it, which screwed up the view loading (getting 'socket closed' errs).
+		Lengthening the timeout is a crude work-around, but it works. 
+
+Timer/UI changes...
+	ui.UIRefreshManager.java - Used to call reloadProjectData every time the timer went off.  Now calls
+		checkProjectDirty() instead.
+	ui.ProjectCompendiumFrame.java - Added checkProjectDirty() code and a couple of semaphores/flags
+		that keep the dirty-checking code and the project-reloading code from colliding with each other.
+	ui.toolbars.UIToolBarData.java - changes to keep the reload button active even when the timer is
+		running (makes sense, now that the timer isn't causing a reload).  Also added a couple of methods
+		so that UIToolBarManager could turn the Reload button on and off.  
+	UIToolBarManager.java - new methods for turning the Reload button on and off.  The checkProjectDirty()
+		code uses this to disable the Refresh button while it is checking the database for updates.  This
+		prevents an ugly little race condition.
+	UIOptionsDialog.java - and -
+	FormatProperties.java - A pair of matched changes that implement an option (User Options / Misc panel)
+		so that the user can choose between the old AutoReload behavior and the new Prompt to Reload behavior.
+		People on fast (LAN) networks can thus benefit from AutoReload, while users using databases hosted
+		over the public internet can choose to reload the project when they want to.  Note that the new
+		algorithm for checking to see if a reload is necessary still applies to both - so even users who
+		choose the AutoReload option will be reloading ONLY when there's something new - an improvement 
+		over the way it was done in 1.5.2.
+
+Subsequent changes that cause ONLY the 'dirty' views to be refreshed.  1.5.2 and the above reload ALL views
+that the user has opened.  This refinement only rebuilds opened views that are out of date.
+
+	datamodel.nodesummary.java - added removeNodeSummaryListItem() method that allows us to remove a specific
+		nodesummary item from the NodeSummaryList
+	datamodel.link.java - added removeLinkSummaryListItem() method that allows us to remove a specific
+		Link item from the LinkSummaryList		
+	datamodel.view.java - added reloadViewData() method that clean out all existing view data and reloads
+		everything 'fresh' from the database
+	ui.ProjectCompendiumFrame.java - Added reloadViewData() method to drive the reloading and refreshing
+		of a specific View.  Changed checkProjectDirty() to call reloadViewData() instead of the 
+		heavy-weight reloadProjectData().
+		
+
+*******************************************************************
+Feature implementation (Inactive User state) and major performance improvement.  This set of changes does
+several things...
+1) Creates an "Inactive" user state.  Why?  When someone leaves the team it may seem logical to delete them
+   as a Compendium user.  Doing this also results in losing them from the Readers list on nodes, and you cannot
+   search on nodes created by them.  By marking them as Inactive, they remain on the Readers list, and you can still
+   search on them.
+2) UINodePopupMenu.java - and - UINodePopupMenuForList.java - Added code to limit the 'send to the inbox of' 
+	pop-up to only show active users    
+3) Several places in the program get comprehensive user data directly from the database - a very expensive
+   operation.  These have been changed to use a cached copy of the User table info.   
+	
+	ServiceManager.RegisterUser() - Added a check to prevent login to a deactivated user account.  Added
+		a special warning message if they try this.
+	DBUser.java - Made comprehensive changes to store/retrieve the CurrentStatus field of the User table.
+		Also made changes to the GET_ALL_USERS query to sort the users
+	UserProfile.java - Made comprehensive changes to include active/inactive as a user attribute
+	UINewUserPanel.java - Changes to implement the UI for setting a user's active/inactive state
+	iCoreConstants.java - added STATUS_INACTIVE as a constant
+	core.datamodel.Model.java - 
+		- Changed loadUsers() to only load the user list from the database once
+		- New updateUserProfile() to plow modified user attributes into a User Profile
+		- New removeUserProfile() to remove a deleted user from the cached UserProfile list
+	UserProfile.java - Cleaned up multiple unused UserProfile constructors, and added support for
+		passing/storing the user's Active/Inactive status
+	ui.IUIConstants.java - Added inactive-user.png icon and bumbed the icon count
+	UISearchDialog.java - changed to fetch the Author list from the cache instead of the database
+	UIUserManagerDialog.java - Comprehensive changes to use/update the UserProfile cache instead
+		of hitting the database all the time.
+		
+Also - BUG FIX in UINewUserPanel.java.  As the code was written in 1.5.2, whenever you edited/modified
+	an existing user (via the Tools ==> User Manager), it wiped out their Inbox info in the database,
+	so the next time the person logged in Compendium created a new mailbox for them.  This resulted in
+	two seemingly identical Inboxes stacked on top on one another in the user's Home Window.		
+	
+		 
+*******************************************************************	
+Feature changes to "Readers" list...
+
+UIReadersDialog.updateListView() - and - 
+UINodePropertiesPanel.updateReadersInformation() - Made changes to sort readers list
+	in alphabetical order (a useful change if you have dozens of readers).
+	
+NodeService.getReaderIDs() - Changed so it now calls a new method:
+	DBNodeUserState.getReaderIDs(), which returns all readers with state = 2 or 3.
+	This will now include users in the Readers list, even if the node/map has been
+	changed since they originally read it.
+		
+*******************************************************************	
+Transclusion pop-up optimization
+
+In 1.5.2 the list of Views that pops up when you focus over the transclusion indicator
+gets destroyed and rebuilt for every minor mouse movement due to an algorithmic bug.
+Fixed this by removing the call to hideviews() from within NodeUI.MouseMoved (in the
+transclusion section only), and added the call to hideviews() into UIViewPane.ShowViews()
+
+Changed DBViewNode.getViews() to return NodeSummary objects from the NodeSummary cache (if
+they exist) rather than rebuilding a new NodeSummary object for each parent view.
+Changed NodeSummary.LoadCodes() to only load the code (tag) info from the database once. (i.e.,
+it now remembers if it has done this, and just returns if the job has been done).
+
+*******************************************************************	
+Bug fix: In 1.5.2, editing a label causes a node icon's position in the map to change.  The
+X,Y position in the ViewNode table identifies the top-left corner of a node's bounding box.
+When you edit a label (making it longer, for example), the bounding box expands, scooting both
+left and right as you type.  However, the fact that the X-position is moving to the left never makes
+it into the database, so when you reload the map the node appears to the right of where it was.
+
+Added NodeUI.flushPosition() method which flushes the position info to the database.  Made
+a change to UINode.FocusLost() (who calls NodeSummary.FlushLabel() when label editing ends)
+to also call flushPosition() if the label was changed.  
+Make corresponding change in UIToolBarFormat.onUpdateFontSize() because changing font size
+also causes nodes to 'slide' right or left.
+
+
+*******************************************************************		
+v24
+
+Performance Optimization: DBNode.delete() - Changed to get Home Window and Inbox ID's from 
+	cache instead of database.  This speeds up Cut/Delete operations
+	
+dblink.java	- paste performance improvement
+dbviewlink - cut/paste performance improvement
+
+Set of changes that prevent Compendium from doing a View refresh (i.e., thinking the view
+is 'dirty') after doing a Paste, Paste from Search, XML Import, QuestMap Import, or Tags-based
+paste (these are all ways that nodes appearing to be authored by others can make their way
+into the current view):
+	IView.java & View.java - Added UpdateLastModifiedByOther() method
+	View.java - Added code to update the LastMod... field during incremental updates
+	io.xml.XMLImport.java - Modified ProcessNode to call the above as nodes get imported
+	
+UINodePopupMenu.onCreateInternalLinkInView() - Modifications to have the internet 'shadow' email
+work with a Lotus Notes desktop client.	
+	
+*******************************************************************	
+v25a
+
+Bug fix: Added ProjectCompendium.APP.refreshIconIndicators() to end of UISearchResultDialog.onInsert()
+		 to correctly update transclusion indicators after nodes have been search-inserted into a view.
+		 
+*******************************************************************		  	
+v25b
+
+Bug fix: UIUtilities.focusNodeAndScroll() - poor sequencing of operations led to a node being DEselected
+	if you follow an INR to it twice in a row.
+	
+Bug fix: F12/Shift-F12 did not work properly if the selection was made by Shift-Clicking the nodes in the
+	selection.  Now it does....
+	
+Upgrade to latest MySQL connector.  Required changes in DBConnectionManager, formerly referencing
+	org.gjt.mm.mysql.Driver to be updated to com.mysql.jdbc.Driver
+	
+Bug fix: NodeUI.keypressed() - Added code to check for initialization of oViewPane.  Was causing a bug 
+	preventing nodes from opening when you hit Enter while first creating them.			
+*******************************************************************		  	
+v25c
+
+Enhancement: Changes to dbConnectionManager (added lgetMySQLServerTimeout()), and to DBConnection
+	(added setTimeouts()) to dynamically set the connection timeout values based on reported
+	MySQL server timeout values.
+	Changes to:
+		uiProjectOptionsDialog (added a Linked Files tab)
+		uiMenuTools (disable "Project Options" for non-administrators)
+		uiUtilities (compute the Linked Files path)
+		XMLImport and XMLExport (impacts zipped XML exports that include Reference nodes)
+		Model/IModel (added the LinkedFiles-related system settings)
+*******************************************************************	
+v25d
+
+Enhancement: Changes to a number of modules that provide Administrator control over where
+	Linked Files are stored (drag & drop), and whether to create the database/user subfolders
+	or not.  This provides a useful way for a work-group to share Drag-n-drop resources on
+	a common network drive.
+	
+*******************************************************************		
+v25f
+
+Bug fix: Shortcuts created from the list view popup referred to themselves instead of the intended parent,
+creating an infinite loop when they were inspected.
+  1) Fixed bug in UIList.createShortCutNodes() so shortcut points correctly to parent.
+     Also added updateTable() to end so item counter updated properly after shortcut was created.
+  2) Added check to DBShortCutNode.getShortCutNode() to prevent recursive infinite loop if
+     shortcuts point to themselves (should never happen again, but....)
+  3) Fixed bug in code that selected the new shortcuts in the list view after they were created
+   
+*******************************************************************
+v25g
+
+Bug fix: Added a couple of lines in UINodeEditPanel.java to make the icon image selector
+	appear correctly in the LIST View contents pane.
+
+Changes to make the Inbox open with items sorted by Creation Date...
+	ProjectCompandiumFrame.addViewToDesktop
+	UIList.sortByCreationDate() (new method)
+
+Changes to make date format for list view elements more user friendly...
+	UIList.getTableCellRendererComponent() - See "if (column == ListTableModel.CREATION_DATE_COLUMN)" part	
+
+*******************************************************************
+
+
+
+v26  
+
+***************************
+**** MSB Supplied fixes ***
+***************************
+ui.toolbars.system.DraggableToolBarIcon.java - MSB 'focus' fix: Add this.requestFocus() to dragGestureRecognized()
+
+ui.stencils.DraggableStencilIcon.java - MSB 'focus' fix: Add this.requestFocus() to dragGestureRecognized()	
+	
+ShortCutNodeSummary.getShortCutNodeSummary() - MSB fix: "if (!ns.bLabelDirty)"...	
+
+NodeSummary.getNodeSummary() - MSB fix: "if (!ns.bLabelDirty)"... (2 places)
+	
+View.getView() - MSB fix: "if (!ns.bLabelDirty)"... (3 places)
+
+*** Series of MSB-supplied changes that make sending internet email a user option
+	*** FormatProperties.java ('emailInbox' property)
+	*** UINodePopupMenu.java
+	*** UINodePopMenuForList.java
+	*** UIOptionsDialog.java
+
+***************************
+**** Other misc fixes *****
+***************************
+	
+CoreUtilities.cleanPath() - Bug fix: Prevent "change slash direction" for paths that start with http or https.
+	This was causing error on XML export/import when maps had reference nodes w/URLs in them
+
+NodeUI.openNode() - Bug fix:  added some code that marks a Reference node as 'Seen' if you double-click
+	on it.  In 1.5.2, the reference would launch, but leave the node marked as unseen.  (Note: I fixed 
+	this for List views a long time ago - didn't think to check for the same problem in Map views.  Duh.)
+
+NodeUI.keyPressed() - Added some code, now commented out, to pop up the Readers window (a
+	wish-list item for Jeff, but no good, intuitive key bindings are left!  Used ALT-W for test)
+
+NodeUI.keyPressed() - Removed the 'if' test for VK_INSERT that opened a node when the Insert key was
+	pressed only if it was a map/list.  Now, the Insert key opens whatever node you're over for editing.
+
+DBLink.processLink() - Commented out the two instances of JOptionPane.showMessageDialog(), left the 
+	println() calls to write warnings to the logfile only.
+
+ProjectCompendiumFrame.onFileExportPower() - Bug fix: related to web zip exports
+ProjectCompendiumFrame.addViewToDesktop() - Bug fix: Force view to 'seen' state when opened.  This fixes some loophole in the view opening code.
+ProjectCompendiumFrame.addViewToDesktop() - Bug fix: Ensures views are visible on the desktop when opened.  
+	Problem occurred when one user was using a high-resolution screen and positioned a view way off to the side.  
+	Then a person with a lower resolution screen opened the view, but couldn't see it anywhere!
+	
+*************************************************************************************************************
+**** v26 Changes to implement new, incremental groupware update
+**** Smart detection when a map has changed, and only add/subtract/update changed elements
+
+UIOptionsDialog.createMiscPanel() - Eliminated "Timed Refresh" option - no longer necessary
+UIOptionsDialog.createRefreshChoiceBox() - REMOVED - no longer necessary
+UIOptionsDialog.onUpdate() - Removed section that referenced the Refresh ChoiceBox
+
+core.datamodel.INodePositionSummary.java - New object
+core.datamodel.NodePositionSummary.java - New object	
+	
+ViewService.getLinkIDs() - New method - returns list of all active links in a view
+IViewService.getLinkIDs() - New method
+ViewService.getNodePositionsSummary() - New method - returns list of NPs for all active nodes in a view
+IViewService.getNodePositionsSummary() - New method	
+	
+DBViewNode.getNodePositionsSummary() - New method (along with GET_NODEPOSITIONS_SUMMARY_QUERY static).
+
+DBViewNode.getNodePosition - Bug fix: Found and fixed two small bugs:
+	if (sShowText.equals("Y)")) {   -SHOULD BE-   if (sShowText.equals("Y")) {		
+	bShowTrans = true  -SHOULD BE-  bShowWeight = true   after the getString(10) test
+	
+NodeSummary.setState() - Commented out setModificationDateLocal() as that creates an inconsistency between the DB and local object
+NodeSummary.flushLabel() - Added setModificationDateLocal()to force consistency between DB and local object
+NodeSummary.setDetail() - Added additional setModificationDateLocal() at end because other code was overwriting the value
+	Note: Yes, you really have to do this twice in this method!
+NodeSummary.setDetailPages() - Added additional setModificationDateLocal() at end because other code was overwriting the value
+	Note: Yes, you really have to do this twice in this method!
+
+View.initializeMembers() - cut 2 unused assignments (xPos, yPos).  Just legacy code cleanup.
+View.isViewDirty() - Complete rewrite, making it must smarter and faster
+View.reloadViewData() - Made it smarter, throwing away less info, since views are now being 'patched' rather than rebuilt completely from scratch
+
+ProjectCompendiumFrame.checkProjectDirty() - Complete rewrite
+ProjectCompendiumFrame.reloadViewData() - eliminated
+ProjectCompendiumFrame.reloadMapViewData() - eliminated
+ProjectCompendiumFrame.reloadListViewData() - eliminated
+ProjectCompendiumFrame.refreshViewFrame() - New method
+ProjectCompendiumFrame.reloadProjectData() - Various changes/fixes
+		
+*************************************************************************************************************
+**** The above v26 updates packed up and delivered to Jeff as 1.6 Alpha 27, w/an incremental installer
+*************************************************************************************************************
+
+
+v27    *******************************************************************************************************
+ProjectCompendiumFrame.addViewToDesktop() - Fixed problem where a view's coordinates could be negative (off the top/left)
+										  - Commented out an error popup in connectToServices()
+UINodePopupMenu.onCreateInternalLinkInView() - Changed code that sends email via desktop client to *not* use java.Desktop() code
+UINodePopupMenuForList.onCreateInternalLinkInView() - same thing
+
+
+v28a    *******************************************************************************************************
+
+HTMLOutline.getBeginTags() - Changed "level0" tag to a "Heading 1" tag when bOptimizeForWord is set.  This is a
+	work-around for Jeff.
+	
+BUG FIX...	 
+NodeUI.keyPressed() - Changed "(modifiers == shortcutKey) case KeyEvent.VK_LEFT" code (i.e., control left-arrow) to
+	simplify the algorithm and correct an error.
+
+v28b    *******************************************************************************************************
+
+BUG FIX...
+UIUtilities.copyDnDFile() - Added code to rename DnD Linked Files if they have a double space or # in their filename
+
+UISearchDialog.onOK - Added code (see bDoQuery stuff) that asks user to confirm an 'empty' search that will look for
+	everything in the database.  
+
+v28c    *******************************************************************************************************
+
+HTMLOutline.print() - Added a space between an icon and the text label following it.
+Did an 'undo' on the "level0" => "Heading 1" swap in v28a
+
+
+v28d     *******************************************************************************************************
+
+A series of changes to solve the Tag Panel's "containing views popup gets stuck open" problem.
+
+	UIWorkingList.hideHint() - New method
+	UITagTreePanel.hideHint() - New method
+	UITagTreePanel.actionPerformed() - Calls hideHint() when user clicks the CANCEL button
+	UIHintNodeViewsPanel.mouseExited() - Calls hideHint() if the tagTreePanel is open
+	UIMenuView.getTagTreePanel() - New method
+	
+v28e    *******************************************************************************************************
+
+Couple of changes to ensure "Unread view" menu status is consistent with format.Properties setting.
+Fixes a problem where C can start w/Unread View open, but menu doesn't show this, allowing user to
+turn it "on" a 2nd time.
+	uiMenuView.addUnreadView()
+	uiMenuView.removeUnreadView()
+
+
+v28f    *******************************************************************************************************
+
+Major rework of "send to the inbox of..." code.  Added new object UISendMailDialog that both node and link
+popup menus use. The dialog allows the sender to include a message that's inserted into the Reference node,
+and also sent along with the Desktop mail.  
+Also allows you to select multiple recipients for the mail message.
+Also (little hack): If the user's User Description field starts with "mailto:" then the value in that field
+is used as their external email address if sending Desktop mail. 
+
+v28g    *******************************************************************************************************
+
+ListUI.mouseClicked() - Single click on node detail indicator in list views opens node Contents window (consistency w/Map views)
+ListUI.keyPressed() - Pressing INSERT when a node is selected in a list view opens node Contents window (consistency w/Map views)
+
+UISearchResultDialog.java - various changes to present/process the "Hide C-mail reference nodes" checkbox
+UIToolBarControllerRow.isTooSmall() - Change to keep toolbars from collapsing when MySQL connetion fails at startup
+
+v28h    *******************************************************************************************************
+
+UIList.showContentDialog - Added call to requestFocus() in a couple of places to patch up screwy lost-focus behavior
+    if user double clicks in some places of the List view.
+    
+v29a    *******************************************************************************************************    
+
+DBSearch.matchAttrib() - Added use of cleanSQLText() on Author names.  This prevents SQL error when
+						 an author's name contains a quote, like O'Doole
+
+UISendMailDialog.sendDesktopMail, and
+FormatProperties.loadProperties - Implement a new Property value called 'emailLengthLimit' which gives control
+								  over the length of the mailto: string passed to the Operating System
+								  Implement a new Property value called 'activeCodeGroup' which allows the
+								  ACTIVE tag group to be a user-setting
+
+NodeUI.keyPressed() - Rewrite code for CTRL-SHIFT-right/left-arrow (selecting words right/left) for Windows
+	platforms.  Fixes a little bug, and makes the selection behavior match exactly what Windows does.
+	
+UITagTreePanel.expandCodeGroup() - new method
+              .createTree() - Now calls the new method. This causes the Tags window to open with the
+              				  ACTIVE group expanded instead of just the first Group in the list
+              				  
+ProjectCompendiumFrame.setActiveCodeGroup() - Now saves active code group in formatProperties file
+                      .loadAllCodeGroups() - Now gets active code group from formatProperties instead
+	of from the database. These changes make the ACTIVE code (tags) group a USER setting instead of a
+	database-wide setting.  Note that I'm still allowing the value to be shoved into the database as
+	before just in case it's needed somewhere else.  
+	
+v29c    *******************************************************************************************************   
+
+NodeUI.mouseEntered() - Changed format of Status bar info when mouse rolls over a node & add Label
+
+UIAerialViewPane.java - added code for drawing wireframe
+
+ViewPaneUI.mouseReleased() - Changes supplied by MSB to fix the the bug where node locations got messed
+	when using alt-drag to open/close space in a zoomed map. 
+	
+UIViewFrame - Added methods to return the H/V scrollbars - used to update the aerial view 	
+
+v29d    *******************************************************************************************************   
+
+ProjectCompendiumFrame.initializeFrame() - added code to keep main frame visible upon startup if it was
+	previously on the right-hand monitor of an extended desktop (2-screen) setup, but the user is now
+	starting things up with only one screen.
+	
+v29f    *******************************************************************************************************  
+
+UIToolBarTags.actionPerformed(), ProjectCompendiumFrame.toggleCodes(), UIMenuManager.toggleTagView() and
+UIMenuView.toggleTagView() - set of changes to make the TAGS button toggle the view on and off. 
+
+ProjectCompendiumFrame.initializeFrame() - Fix to ensure the main Compendium Frame is visible (2-headed monitor problem)
+
+v29g    *******************************************************************************************************  
+
+Aerial view improvements and wireframe
+View.removeMemberLink() - Correct bug: wrong event passed to firePropertyChange()
+UINode.setFont() - Make icon text gap change appropriately when the view is zoomed
+UIMapViewFrame.rescaleAerial() - New method, force rescale
+UIAerialViewPane.java - numerous changes/fixes
+UIAerialDialog.java - numerous changes/fixes
+NodeUI.mouseClicked(), mouseDragged(), processMouseDragged(), mouseMoved(), keyPressed() - Changes to ignore these
+	events when they occur in the context of the Aerial View
+ViewPaneUI.mouseClicked(), mouseReleased(), mouseDragged(), keyPressed(), getDisplacement() - 	Changes to ignore these
+	events when they occur in the context of the Aerial View, or process them correctly (e.g. paste) when
+	in a zoomed view
+
+UISearchDialog.java - Changed search defaults to NOT look in Detail and "match all" (EJC/SCE preference)
+
+===============================================================================================================  
+===============================================================================================================
+
+
+
+
+
+
+
+
+
+  	
+TASK LIST
+=========
+
+... Improve robustness of the PREFIX_PATH parser 
+
+
+KNOWN PROBLEMS
+==============
+If you start building the Unread View on a big database, then abort it by killing the process, 
+Compendium will, by default, try to build the Unread View every time you restart it.  You'll
+get the warning and a chance to not build it, but it's still a small pain.  Need to look into
+how the startup-state of the Unread View is maintained, and clear it appropriately.
+
+
+When you open a node/map (contents), there is a fixed overhead of ~3DB calls per containing view.
+This is because all the containing views are shown on the VIEW tab, and C builds the complete
+view object that lies behind the view's name.  This makes it easy for C to then open the view if
+a user clicks on it.  Unfortunately (e.g., in the case of the Commons) a view/node with LOTS of 
+containing views will take a long time to open because of this.  Interestingly, this happens
+when you right-click on a map the first time (so you may get a long delay before you see the
+menu).  Subsequently, you get the menu right away, and the work happens after you ask to see
+the Contents..........  All this happens via UINodeViewPanel.updateListView().
+
+
+Notes to self - how things are wired up
+=======================================
+INodeService.lCountNodes    ==> NodeService.lCountNodes    ==> DBNode.lCountNodes
+INodeService.lGetStateCount ==> NodeService.lGetStateCount ==> DBNodeUserState.lGetStateCount
+INodeService.lGetViewCount  ==> NodeService.lGetViewCount  ==> DBNode.lGetViewCount
+INodeService.iGetParentCount  ==> NodeService.iGetParentCount  ==> DBNode.iGetParentCount
+INodeService.iGetDeletedNodeCount  ==> NodeService.iGetDeletedNodeCount  ==> DBNode.iGetDeletedNodeCount
+INodeService.vMarkProjectSeen ==> NodeService.vMarkProjectSeen ==> DBNode.vMarkProjectSeen
+
+DBAdminDatabase.java - the place to make a couple of changes to make C work on Pair.
+ 	
+
+
+
+
+
+
+
+
+*******************************************************************************************************
+Opening Compendium URL's from email messages (Windows)
+======================================================
+Note: None of this has been folded into the Compendium source code (yet).  It's all stand-alone
+in separate projects.  These notes are just to document what & where this stuff is.
+
+1.  Implemented new project "CompendiumUrlRelay" which acts as a relay between the operating system
+	and Compendium.  This accepts one argument - the comp://view/node URL, and passes it into
+	Compendium.  
+	
+2.	Created a CompendiumUrlRelay.bat file which is what Windows (via the registry) uses
+	to invoke the Java Relay code.  Right now the .bat file has a hard-wired path
+	built into it which need to generalized. 
+	
+3.	Created some new registry entries that tell Windows what to do when someone clicks on a
+	comp: URL.  These are all under HKEY_CLASSES_ROOT/comp
+	
+4. Created another stand-alone project, CompendiumUrlServer, which just sits and waits
+	for connections from the Listener, and then prints out what it got.  This code
+	will be migrated into Compendium, where it will actually launch the URL.  	
+	
+		
+*******************************************************************************************************
+Notes about getting Compendium running against the Pervasive 8.5 server 
+
+1.  Needed to modify table definitions and field definitions.  A few things in particular...
+	a) Cannot define INDEXes in-line with a CREATE TABLE statement.  Need to break
+	   these out by using the CREATE INDEX command
+	b) Cannot have an index name > 20 characters.  These can be shortened w/out impacting
+	   other installations.
+	c) Data type definitions:
+		Changed VARCHAR2 to VARCHAR
+		Changed LONGTEXT to LONGVARCHAR
+		Changed ENUM to VARCHAR(1)
+	d) Could not get some Foreign Key constraints defined
+	e) Could not get some 3-field indexes built  
+	f) Remove 'type=InnoDB' from all table definitions
+	g) Reversed ordering of 'not null' and 'default xyz' field definition clauses
+	h) Two field names are Pervasive reserved words: Login (used in 2 tables) and Action (used in 1 table)
+	i) One table name is a Pervasive reserved word: Audit
+	j) Probably a couple of other things I forgot to write down...
+	
+2.	Got the Pervasive JDBC jar's working by 'faking out' compendium to do some special stuff
+	for 'specially named' MySQL databases.  To have this be 'right', need to implement a third
+	class of databases in Compendium (Derby, MySQL, Pervasive).  There is already a lot of special
+	code in a couple of modules that is DB type-dependent, so this would be a somewhat natural extension. 	
+	
+3.	Found and worked around a bug in the Pervasive JDBC driver that showed up as node labels
+	getting turned into strange java strings.  The same fix will need to be applied in other
+	places of the code where the same type of database calls are being made.
+	
+	Turns out that the Pervasive JDBC driver does not correctly handle Java 'PreparedStatement' 
+	parameter substitution when the parameter is a Java Stream.  Pervasive may have fixed this 
+	in later releases. (By the way, later releases of their JDBC driver are not backwards-compatible 
+	with v8.5).
+	
+4.	Had to completely side-step the 'check admin database' code and the code that displays
+	projects to choose from.  This is because Pervasive has no "SHOW DATABASES" command
+	for their server.
+	
+5.	Hacked around the Login field name (see 1h above) problem, which makes the code work
+	for Pervasive, but it is then broken for Derby & MySQL.  There are two solutions here...
+	a) Have different field names in Pervasive (than in MySQL) for these two fields, and
+	   add more database-specific special cases in the code.
+	b) Change the field names so that the code is consistent for all databases, and then
+	   work out how to do database migration for existing MySQL and Derby users.	  
+
+Bottom line so far: Does it look like Compendium could be made to run connecting to the Pervasive
+database server?  Yes.  
+*******************************************************************************************************
+		   
+Making groupware refresh smarter...
+1) Change DBViewNode.bIsViewDirty() to return a list of dirty NodeID's instead of a boolean.  This
+   comes back to ProjectCompendiumFrame.checkProjectDirty()
+2) Change the reloadViewData() methods (main, map & list) into refreshViewData(), passing them
+   the list of NodeID's to fetch/refresh
+3) Fetch the 'updated' nodes and either add them to the view or replace them if already in the view.
+   A new case is looking for nodes that have been deleted from the view - that's harder to track
+4) Check for any links modified by others since last-link-mod date and do the same thing   
+5) Slightly different problem with deletions - when you delete a link its status is not changed
+   to '3' in the database - it is really deleted completely from the link and the viewlink table.
+   (mb: double check this.  How then does an undo after delete give us the same LinkID?
+
+*******************************************************************************************************
+** Reed to return to UINodePopupMenuForList and fix what happens in handling miMenuItemShortCut   
+    
+    
+TO DO:
+
+1) Make node editing update the NodeSummary LastModTime so that we don't invoke view updates on ourself
+2) Why does AddMemberNode bring in the node w/out a node contents glyph?
+
+
+
+Internet email alternatives..........
+
+	Runtime.getRuntime().exec("cmd.exe /C start mailto:michael@3rd-force.org"); 
+
+public static String encode(String s) throws UnsupportedEncodingException {
+	return java.net.URLEncoder.encode(s, "UTF-8").replaceAll("\\+", "%20");
+}
+
+cmd.exe /C start "Mail test" "mailto:michael@3rd-force.org?SUBJECT=Compendium%20Inbox%20Notice&BODY=test%20test%0Atest"
+	    

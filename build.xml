@@ -1,0 +1,229 @@
+<?xml version="1.0"?>
+<project name="compendium" basedir="." default="installer">
+  <property name="src" location="System/src"/>
+  <property name="lib"  location="System/lib"/>
+  <property name="build" location="build"/>
+  <property name="dist" location="dist"/>
+  <property name="installer" location="installer"/>
+  <property name="etc" location="etc"/>
+  
+  <!-- Compilation control options -->
+  <property name="build.compiler" value="modern" />
+  <property name="compile.deprecation" value="off" />
+  <property name="compile.debug" value="on" />
+  <property name="compile.optimize" value="off" />
+  <property name="compile.encoding" value="UTF-8" />
+
+  <property name="inno.setup" value="c:\Program Files (x86)\Inno Setup 5\ISCC.EXE" />
+  <property name="bash.exe" value="c:\cygwin\bin\bash.exe" />
+  <property name="jre.file" value="${installer}\jre-6u21-windows-i586-s.exe" />
+
+  <property name="version.number" value=""/>
+  <property file="build.number"/>
+
+  <path id="app.classpath">
+      <fileset dir="${lib}">
+          <include name="AppleJavaExtensions.jar"/>
+          <include name="derby.jar"/>
+          <include name="jabberbeans.jar"/>
+          <include name="jhall.jar"/>
+          <include name="kunststoff.jar"/>
+          <include name="mysql-connector-java-5.1.6-bin.jar"/>
+          <include name="triplestore.jar"/>
+          <include name="sync.jar"/>
+          <include name="xml.jar"/>
+      </fileset>
+  </path>
+
+  <macrodef name="compile">
+      <attribute name="srcdir" />
+      <attribute name="destdir" />
+      <attribute name="classpath" />
+      <sequential>
+          <record name="compile.log" action="start" />
+          <javac source="1.5"
+                 srcdir="@{srcdir}"
+                 destdir="@{destdir}"
+                 deprecation="${compile.deprecation}"
+                 debug="${compile.debug}"
+                 optimize="${compile.optimize}"
+                 encoding="${compile.encoding}"
+                 includeAntRuntime="false"
+          >
+          	  <!-- compilerarg value="-Xlint:deprecation"/>
+          	  <compilerarg value="-Xlint:unchecked"/ -->
+              <classpath refid="@{classpath}" />
+          </javac>
+          <record name="compile.log" action="stop" />
+
+          <!--
+              Copy all files except .java to follow default behavior of IDEs
+              (Eclipse, IDEA do this exactly the same way)
+          -->
+          <copy todir="@{destdir}" overwrite="yes">
+              <fileset dir="@{srcdir}">
+                  <exclude name="**/*.java" />
+              </fileset>
+          </copy>
+      </sequential>
+  </macrodef>
+
+  <target name="compile-main">
+  		<buildnumber/>
+  		<exec executable="${bash.exe}" output="buildnumber-output.txt" error="buildnumber-error.txt">
+  			<arg value="build_number_deploy.sh"/>
+  		</exec>
+      <mkdir dir="${build}"/>
+      <compile 
+        srcdir="${src}"
+        destdir="${build}"
+        classpath="app.classpath"
+      />
+  </target>
+
+
+  <target name="clean">
+    <delete dir="${build}"/>
+    <delete dir="${dist}"/>
+  </target>
+
+  <target 
+    name="dist" 
+    depends="clean, compile-main" 
+    description="Creates compendiumcore.jar and compendium.jar files"
+  >
+      <mkdir dir="${dist}"/>
+      <copy todir="${dist}">
+      	<fileset dir="${basedir}">
+      	  <exclude name="**/Thumbs.db"/>
+       	  <include name="System/lib/**"/>
+       	  <exclude name="System/lib/*.jardesc"/>
+       	  <include name="System/resources/**"/>
+       	  <exclude name="System/resources/Databases/**"/>
+       	  <exclude name="System/resources/Logs/**"/>
+           <exclude name="System/resources/Format.properties"/>
+      	  <include name="Backups/**"/>
+      	  <exclude name="Exports/**"/>
+      	  <include name="Linked Files/**"/>
+      	  <include name="Skins/**"/>
+      	  <include name="Templates/**"/>
+      	</fileset>
+        <fileset dir="${installer}">
+          <include name="Compendium.bat"/>
+          <include name="Compendium.dtd"/>
+          <include name="open_word_with_template.vbs"/>
+          <include name="license.htm"/>
+          <include name="ReadMe.htm"/>
+        </fileset>
+      </copy>
+      <mkdir dir="${dist}/Exports"/>
+      <mkdir dir="${dist}/System/resources/Databases"/>
+      <mkdir dir="${dist}/System/resources/Logs"/>
+      <jar 
+        jarfile="${dist}/System/lib/compendiumcore.jar"
+        basedir="${build}"
+        includes="com/compendium/core/**"
+      />
+      <jar 
+        jarfile="${dist}/System/lib/compendium.jar"
+        basedir="${build}" 
+        includes="com/compendium/*.class,com/compendium/ui/**,com/compendium/io/**,com/compendium/meeting/**"
+      />
+      <jar 
+		  jarfile="${dist}/System/lib/sync.jar"
+		  basedir="${build}" 
+		  includes="com/compendium/Synchronizer.class,com/compendium/sync/*.class"
+      />
+<!--       <jar 
+		  jarfile="Sync/sync2.jar"
+		  basedir="build" 
+		  includes="com/compendium/Sync2.class,com/compendium/Syncronizer.class,com/compendium/sync/*.class"
+      />
+      -->
+  </target>
+
+  <target name="installer" description="Builds Compendium Installers for all configurations">
+	<antcall target="dist"/>
+	<!-- antcall target="build-installer"/ -->
+	<!--
+	<move todir="C:/Users/matt/projects/cvs/trunk/Output/history">
+		<fileset dir="C:/Users/matt/projects/cvs/trunk/Output">
+			<include name="Compendium*.exe"/>
+		</fileset>
+	</move>
+-->
+	<antcall target="build-installer">
+		<param name="configuration" value="default" />
+	</antcall>
+	<antcall target="build-installer">
+		<param name="configuration" value="SCE" />
+	</antcall>
+	<antcall target="build-installer">
+		<param name="configuration" value="MattsHost" />
+	</antcall>
+	
+	<antcall target="build-installer-xp">
+		<param name="configuration" value="default_xp" />
+	</antcall>
+	<antcall target="build-installer-xp">
+		<param name="configuration" value="SCE_xp" />
+	</antcall>
+	<antcall target="build-installer-xp">
+		<param name="configuration" value="MattsHost_xp" />
+	</antcall>
+  </target>
+
+  <target name="build-installer" depends="check-installer-dependencies" if="installer.dependencies.present">
+	<condition property="configuration" value="default">
+		<not><isset property="configuration" /></not>
+	</condition>
+ 	<antcall target="copy-configuration-settings" />
+	<exec executable="${inno.setup}" output="inno-setup-output.txt" error="inno-setup-error.txt">
+		<arg value="installer.iss"/>
+		<arg value="/dConfiguration=${configuration}"/>
+	</exec>
+  </target>
+
+  <target name="build-installer-xp" depends="check-installer-dependencies" if="installer.dependencies.present">
+	<condition property="configuration" value="default_xp">
+		<not><isset property="configuration" /></not>
+	</condition>
+ 	<antcall target="copy-configuration-settings" />
+	<exec executable="${inno.setup}" output="inno-setup-output.txt" error="inno-setup-error.txt">
+		<arg value="installer.xp.iss"/>
+		<arg value="/dConfiguration=${configuration}"/>
+	</exec>
+  </target>
+
+  <target name="copy-configuration-settings" if="configuration">
+    <copy todir="${dist}/System/resources/" overwrite="true" >
+      <fileset dir="${etc}/configuration/${configuration}" includes="*.*" />
+    </copy>
+  </target>
+	
+  <target name="check-installer-dependencies" depends="inno-setup-exist, jre-exist">
+    <condition property="installer.dependencies.present">
+      <and>
+        <isset property="inno.setup.present"/>
+        <isset property="jre.present"/>
+      </and>
+    </condition>
+  </target>
+	
+  <target name="inno-setup-exist" depends="check-inno-setup" unless="inno.setup.present">
+    <echo level="error" message="Cannot find ${inno.setup}. Please install Inno Setup software."/>
+  </target>
+
+  <target name="check-inno-setup">
+    <available file="${inno.setup}" property="inno.setup.present"/>
+  </target>
+
+  <target name="jre-exist" depends="check-jre" unless="jre.present">
+    <echo level="error" message="Cannot find ${jre.file}. Please put this file into the root project folder ${basedir}."/>
+  </target>
+
+  <target name="check-jre">
+    <available file="${jre.file}" property="jre.present"/>
+  </target>
+  
+</project>

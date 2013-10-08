@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<project name="compendium" basedir="." default="compile">
+
+  <target name="compile">
+      <javac 
+        srcdir="./"
+        destdir="./"
+        excludes="history/**"
+        classpath="../dist/System/lib/sync.jar;lib/derby.jar;lib/mysql-connector-java-5.1.6.jar"
+      />
+<!--      <javac 
+        srcdir="src/"
+        destdir="build"
+        classpath="lib/derby.jar;lib/mysql-connector-java-5.1.6.jar"
+      />
+      -->
+  </target>
+
+<!--
+  <target 
+    name="dist" 
+    depends="compile" 
+  >
+      <jar 
+		  jarfile="sync2.jar"
+		  basedir="build" 
+		  includes="com/compendium/Sync2.class"
+      />
+  </target>
+-->
+
+  
+</project>

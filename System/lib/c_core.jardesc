@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="WINDOWS-1252" standalone="no"?>
+<jardesc>
+    <jar path="C:/Documents and Settings/Michael/My Documents/eclipse/Compendium-Development/System/lib/compendiumcore.jar"/>
+    <options buildIfNeeded="true" compress="true" descriptionLocation="/Compendium-Development/System/lib/c_core.jardesc" exportErrors="true" exportWarnings="true" includeDirectoryEntries="false" overwrite="true" saveDescription="true" storeRefactorings="false" useSourceFolders="false"/>
+    <storedRefactorings deprecationInfo="true" structuralOnly="false"/>
+    <selectedProjects/>
+    <manifest generateManifest="true" manifestLocation="" manifestVersion="1.0" reuseManifest="false" saveManifest="false" usesManifest="true">
+        <sealing sealJar="false">
+            <packagesToSeal/>
+            <packagesToUnSeal/>
+        </sealing>
+    </manifest>
+    <selectedElements exportClassFiles="true" exportJavaFiles="false" exportOutputFolder="false">
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.core.db"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.core"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.core.db.management"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.core.datamodel"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.core.datamodel.services"/>
+    </selectedElements>
+</jardesc>

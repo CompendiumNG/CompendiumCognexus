@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="WINDOWS-1252" standalone="no"?>
+<jardesc>
+    <jar path="C:/Documents and Settings/Michael/My Documents/eclipse/Compendium-Development/System/lib/compendium.jar"/>
+    <options buildIfNeeded="true" compress="true" descriptionLocation="/Compendium-Development/System/lib/c_other.jardesc" exportErrors="true" exportWarnings="true" includeDirectoryEntries="false" overwrite="true" saveDescription="true" storeRefactorings="false" useSourceFolders="false"/>
+    <storedRefactorings deprecationInfo="true" structuralOnly="false"/>
+    <selectedProjects/>
+    <manifest generateManifest="true" manifestLocation="" manifestVersion="1.0" reuseManifest="false" saveManifest="false" usesManifest="true">
+        <sealing sealJar="false">
+            <packagesToSeal/>
+            <packagesToUnSeal/>
+        </sealing>
+    </manifest>
+    <selectedElements exportClassFiles="true" exportJavaFiles="false" exportOutputFolder="false">
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.ui.menus"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.meeting.remote"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.io.questmap"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.io.jabber"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.ui.stencils"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.ui"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.ui.toolbars.system.images"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.io.questmap.util"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.ui.toolbars.system"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.io.http"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.ui.plaf"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.io"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.meeting.io"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.ui.popups"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.meeting"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.ui.dialogs"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.io.html"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.ui.panels"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.ui.toolbars"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.ui.edits"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.io.udig"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.ui.linkgroups"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.ui.tags"/>
+        <javaElement handleIdentifier="=Compendium-Development/System\/src&lt;com.compendium.io.xml"/>
+    </selectedElements>
+</jardesc>
