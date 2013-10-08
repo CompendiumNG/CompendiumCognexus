@@ -8,3 +8,7 @@
 .settings
 .project
 .classpath
+dist
+buildnumber-error.txt
+buildnumber-output.txt
+compile.log
