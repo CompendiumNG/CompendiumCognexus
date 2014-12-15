@@ -1,0 +1,109 @@
+FORMAT: 1A
+
+# cngx.api.memory
+cngx.api.memory is storage API for CompendiumNG/cngx. Other two are cngx.api.face and cngx.api.brain
+
+
+# Group Nodes
+# Node List [/allnodes]
+### List all Nodes [GET]
+
++ Response 200 (application/json)
+
+        [{
+            "id": 1, "title": "node 1"
+        }, {
+            "id": 2, "title": "node 2"
+        }, {
+            "id": 3, "title": "node 3"
+        }]
+
+# Search node by rid [/node/{rid}]
+
++ Parameters
+    + rid (required, number, `1`) ... `record id` of the Node to perform action with.
+
+
+### get node by RID Nodes [GET] 
+
++ Response 200 (application/json)
+
+        [{
+            "id": 1, "title": "node 1"
+        }]
+
+# Search node by uuid [/node/{uuid}]
+
++ Parameters
+    + uuid (required, number, `1`) ... `UUID` of the Node to perform action with.
+
+### get node by UUID Nodes [GET]
+
++ Response 200 (application/json)
+
+        [{
+            "id": 1, "title": "node 1"
+        }]
+
+
+
+
+
+# Group Links
+
+# Group Tags
+
+# Group Notes
+Notes related resources of the **Notes API**
+
+## Notes Collection [/notes]
+### List all Notes [GET]
++ Response 200 (application/json)
+
+        [{
+          "id": 1, "title": "Jogging in park"
+        }, {
+          "id": 2, "title": "Pick-up posters from post-office"
+        }]
+
+## Notes Collection [/notesmy]
+
+### List all Notes [GET]
+
++ Response 200 (application/json)
+
+        [{
+          "id": 1, "title": "Jogging in park"
+        }, {
+          "id": 2, "title": "Pick-up posters from post-office"
+        }]
+
+### Create a Note [POST]
+
++ Request (application/json)
+
+        { "title": "Buy cheese and bread for breakfast." }
+
++ Response 201 (application/json)
+
+        { "id": 3, "title": "Buy cheese and bread for breakfast." }
+
+## Note [/notes/{id}]
+A single Note object with all its details
+
++ Parameters
+    + id (required, number, `1`) ... Numeric `id` of the Note to perform action with. Has example value.
+
+### Retrieve a Note [GET]
++ Response 200 (application/json)
+
+    + Header
+
+            X-My-Header: The Value
+
+    + Body
+
+            { "id": 2, "title": "Pick-up posters from post-office" }
+
+### Remove a Note [DELETE]
++ Response 204
